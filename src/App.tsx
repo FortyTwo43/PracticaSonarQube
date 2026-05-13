@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import './App.css'
 
 interface Notification {
-  type: 'success' | 'error';
+  type: 'success' | 'error' | 'warning';
   title: string;
   message: string;
 }
@@ -23,7 +23,7 @@ function App() {
     if (notification) {
       const timer = setTimeout(() => {
         setNotification(null);
-      }, 10000); // 10 seconds for errors since they contain lots of info
+      }, 5000); // 5 seconds is enough for generic messages
       return () => clearTimeout(timer);
     }
   }, [notification]);
@@ -36,31 +36,68 @@ function App() {
     }));
   };
 
+  const validateForm = () => {
+    // 1. Basic empty checks
+    if (!formData.nombre || !formData.apellido || !formData.correo || !formData.contraseña) {
+      return "Todos los campos obligatorios deben ser completados.";
+    }
+
+    // 2. Age validation
+    const ageValue = parseInt(formData.edad);
+    if (isNaN(ageValue) || ageValue <= 0 || ageValue > 120) {
+      return "Por favor, ingrese una edad válida (1-120).";
+    }
+
+    // 3. Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.correo)) {
+      return "El formato del correo electrónico no es válido.";
+    }
+
+    // 4. Phone validation (basic)
+    if (formData.telefono.length < 7) {
+      return "El número de teléfono debe tener al menos 7 dígitos.";
+    }
+
+    // 5. Password validation
+    if (formData.contraseña.length < 8) {
+      return "La contraseña debe tener al menos 8 caracteres.";
+    }
+
+    return null; // Valid
+  };
+
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const ageValue = parseInt(formData.edad);
+    const validationError = validateForm();
 
-    if (isNaN(ageValue) && formData.edad !== '') {
-      // "Revealing Error" simulation
-      const stackTrace = `Error: Invalid numeric input in RegistrationController.cs:line 45
-Path: C:\\inetpub\\wwwroot\\PROD-SERVER-01\\src\\Controllers\\RegistrationController.cs
-DB Server: DB-CLUSTER-NORTH-02.internal.network
-Tables Exposed: [Users], [UserCredentials], [UserProfiles]
-Internal Runtime: .NET 6.0.12 (C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319)`;
-
+    if (validationError) {
       setNotification({
-        type: 'error',
-        title: 'System Exception: FormatException',
-        message: stackTrace
+        type: 'warning',
+        title: 'Validación de Formulario',
+        message: validationError
       });
-    } else {
+      return;
+    }
+
+    // Simulated API Call
+    try {
+      // In a real scenario, this would be a fetch call.
+      // If the "server" failed, we would catch it and show a GENERIC message.
+      const isSimulatedServerDown = false; 
+
+      if (isSimulatedServerDown) {
+        throw new Error("Ocurrió un error inesperado en el servidor");
+      }
+
       setNotification({
         type: 'success',
         title: 'Registro Exitoso',
-        message: 'El usuario ha sido registrado correctamente en el sistema.'
+        message: 'Su cuenta ha sido creada correctamente.'
       });
-      // Clear form on success
+
+      // Reset form
       setFormData({
         nombre: '',
         apellido: '',
@@ -68,6 +105,14 @@ Internal Runtime: .NET 6.0.12 (C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.303
         telefono: '',
         correo: '',
         contraseña: ''
+      });
+
+    } catch (error) {
+      // CORRECTED: Generic error message that reveals NOTHING about the system.
+      setNotification({
+        type: 'error',
+        title: 'Error del Sistema',
+        message: 'No se pudo procesar el registro en este momento. Por favor, intente más tarde.'
       });
     }
   };
@@ -95,10 +140,10 @@ Internal Runtime: .NET 6.0.12 (C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.303
 
       <div className="container">
         <div className="card">
-          <h1>Registro de Usuario</h1>
-          <p className="subtitle">Complete los campos para crear su cuenta.</p>
+          <h1>Registro Seguro</h1>
+          <p className="subtitle">Sus datos están protegidos con nosotros.</p>
           
-          <form onSubmit={handleRegister}>
+          <form onSubmit={handleRegister} noValidate>
             <div className="form-group">
               <label htmlFor="nombre">Nombre</label>
               <input 
@@ -128,9 +173,11 @@ Internal Runtime: .NET 6.0.12 (C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.303
             <div className="form-group">
               <label htmlFor="edad">Edad</label>
               <input 
-                type="text" 
+                type="number" 
                 id="edad" 
                 name="edad" 
+                min="1"
+                max="120"
                 placeholder="Ej. 25"
                 value={formData.edad}
                 onChange={handleChange}
@@ -144,7 +191,7 @@ Internal Runtime: .NET 6.0.12 (C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.303
                 type="tel" 
                 id="telefono" 
                 name="telefono" 
-                placeholder="Ej. +57 300..."
+                placeholder="Ej. 3001234567"
                 value={formData.telefono}
                 onChange={handleChange}
                 required 
@@ -170,7 +217,7 @@ Internal Runtime: .NET 6.0.12 (C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.303
                 type="password" 
                 id="contraseña" 
                 name="contraseña" 
-                placeholder="••••••••"
+                placeholder="Mínimo 8 caracteres"
                 value={formData.contraseña}
                 onChange={handleChange}
                 required 
@@ -178,7 +225,7 @@ Internal Runtime: .NET 6.0.12 (C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.303
             </div>
 
             <button type="submit" className="btn-primary">
-              Registrarse
+              Crear Cuenta
             </button>
           </form>
         </div>
