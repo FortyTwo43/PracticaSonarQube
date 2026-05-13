@@ -1,5 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
+
+interface Notification {
+  type: 'success' | 'error';
+  title: string;
+  message: string;
+}
 
 function App() {
   const [formData, setFormData] = useState({
@@ -11,8 +17,16 @@ function App() {
     contraseña: ''
   });
 
-  const [isCrashed, setIsCrashed] = useState(false);
-  const [errorDetails, setErrorDetails] = useState('');
+  const [notification, setNotification] = useState<Notification | null>(null);
+
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 10000); // 10 seconds for errors since they contain lots of info
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -25,60 +39,60 @@ function App() {
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Simulating the error: if age is not a number, the application "crashes" 
-    // and reveals sensitive information in a raw stack trace.
     const ageValue = parseInt(formData.edad);
 
     if (isNaN(ageValue) && formData.edad !== '') {
-      // Reveal sensitive information in the stack trace as per "Caso 2"
-      const stackTrace = `
-Unhandled Exception: System.NumberFormatException: Input string was not in a correct format.
-   at System.Number.ParseInt32(String s, NumberStyles style, NumberFormatInfo info)
-   at MyApp.Web.Controllers.RegistrationController.Register(UserDto user) in C:\\inetpub\\wwwroot\\PROD-SERVER-01\\src\\Controllers\\RegistrationController.cs:line 45
-   at MyApp.Data.Repositories.UserRepository.Insert(UserEntity entity) in C:\\inetpub\\wwwroot\\PROD-SERVER-01\\src\\Data\\Repositories\\UserRepository.cs:line 128
-   
---- Database Context Information ---
-Server Name: DB-CLUSTER-NORTH-02.internal.network
-Database Instance: MSSQLSERVER_PROD
-Target Tables: [Users], [UserCredentials], [UserProfiles], [AuditLogs]
-Current Session ID: 4529-AX-9921
-Internal Paths: 
-  - D:\\Data\\DBFiles\\PROD_USER_DB.mdf
-  - E:\\Logs\\DatabaseLogs\\Transaction_Log_01.ldf
-  
---- Environment Info ---
-OS: Windows Server 2022 Datacenter
-Framework: .NET 6.0.12
-Runtime Path: C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319
-User Context: DOMAIN_PROD\\AppService_User
-      `;
-      setErrorDetails(stackTrace);
-      setIsCrashed(true);
+      // "Revealing Error" simulation
+      const stackTrace = `Error: Invalid numeric input in RegistrationController.cs:line 45
+Path: C:\\inetpub\\wwwroot\\PROD-SERVER-01\\src\\Controllers\\RegistrationController.cs
+DB Server: DB-CLUSTER-NORTH-02.internal.network
+Tables Exposed: [Users], [UserCredentials], [UserProfiles]
+Internal Runtime: .NET 6.0.12 (C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319)`;
+
+      setNotification({
+        type: 'error',
+        title: 'System Exception: FormatException',
+        message: stackTrace
+      });
     } else {
-      alert('¡Registro exitoso! (Simulado)');
+      setNotification({
+        type: 'success',
+        title: 'Registro Exitoso',
+        message: 'El usuario ha sido registrado correctamente en el sistema.'
+      });
+      // Clear form on success
+      setFormData({
+        nombre: '',
+        apellido: '',
+        edad: '',
+        telefono: '',
+        correo: '',
+        contraseña: ''
+      });
     }
   };
-
-  if (isCrashed) {
-    return (
-      <div className="error-screen">
-        <div className="error-header">
-          <div className="error-title">Critical System Error: 0x80070057</div>
-          <div>An unhandled exception occurred during the execution of the current web request.</div>
-        </div>
-        <div className="stack-trace">
-          {errorDetails}
-        </div>
-        <button className="btn-reload" onClick={() => window.location.reload()}>
-          Restart Application
-        </button>
-      </div>
-    );
-  }
 
   return (
     <>
       <div className="background-glow"></div>
+      
+      {notification && (
+        <div className="notification-container">
+          <div className={`notification ${notification.type}`}>
+            <button 
+              className="notification-close" 
+              onClick={() => setNotification(null)}
+            >
+              ✕
+            </button>
+            <span className="notification-title">{notification.title}</span>
+            <div className="notification-content">
+              {notification.message}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="container">
         <div className="card">
           <h1>Registro de Usuario</h1>
